@@ -1,0 +1,21 @@
+# Android
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Google Services (contém chaves — adicione o real via CI secret)
+app/google-services.json
+
+# Sensitive
+*.env
+keystore.properties

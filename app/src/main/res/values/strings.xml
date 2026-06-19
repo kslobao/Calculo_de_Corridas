@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cálculo de Corridas</string>
+
+    <!-- Admob -->
+    <string name="admob_app_id">ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX</string>
+    <string name="admob_banner_id">ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX</string>
+    <string name="admob_interstitial_id">ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX</string>
+    <string name="admob_rewarded_id">ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX</string>
+    <string name="admob_app_open_id">ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX</string>
+
+    <!-- Accessibility -->
+    <string name="accessibility_service_label">Cálculo de Corridas</string>
+    <string name="accessibility_service_description">Monitora ofertas de corridas dos aplicativos Uber, 99, inDrive e iFood para calcular automaticamente o valor por km e classificar a rentabilidade.</string>
+    <string name="accessibility_service_summary">Análise automática de corridas</string>
+
+    <!-- Notification channels -->
+    <string name="notification_channel_service_id">ride_monitor</string>
+    <string name="notification_channel_service_name">Monitoramento de Corridas</string>
+    <string name="notification_channel_service_desc">Mantém o serviço de monitoramento ativo</string>
+    <string name="notification_channel_ride_id">ride_alert</string>
+    <string name="notification_channel_ride_name">Alertas de Corridas</string>
+    <string name="notification_channel_ride_desc">Notificações de novas corridas detectadas</string>
+
+    <!-- General -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancelar</string>
+    <string name="save">Salvar</string>
+    <string name="delete">Excluir</string>
+    <string name="edit">Editar</string>
+    <string name="enable">Ativar</string>
+    <string name="disable">Desativar</string>
+    <string name="close">Fechar</string>
+    <string name="loading">Carregando…</string>
+    <string name="error_generic">Algo deu errado. Tente novamente.</string>
+    <string name="no_data">Nenhum dado disponível</string>
+
+    <!-- Plans -->
+    <string name="plan_free">Gratuito</string>
+    <string name="plan_pro">PRO</string>
+    <string name="subscribe_monthly">Mensal</string>
+    <string name="subscribe_yearly">Anual</string>
+    <string name="restore_purchase">Restaurar compra anterior</string>
+
+    <!-- Classification -->
+    <string name="classification_excellent">Excelente</string>
+    <string name="classification_good">Boa</string>
+    <string name="classification_poor">Ruim</string>
+
+    <!-- App sources -->
+    <string name="app_uber">Uber</string>
+    <string name="app_99">99</string>
+    <string name="app_indrive">inDrive</string>
+    <string name="app_ifood">iFood</string>
+</resources>
