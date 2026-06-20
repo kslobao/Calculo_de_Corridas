@@ -74,8 +74,9 @@ class SelectorVersion extends Model
         }
 
         return [
-            'version' => $this->version,
-            'apps'    => $apps,
+            'version'    => $this->version,
+            'updated_at' => $this->published_at?->toIso8601String() ?? now()->toIso8601String(),
+            'apps'       => $apps,
         ];
     }
 }

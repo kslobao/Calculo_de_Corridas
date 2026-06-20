@@ -4,10 +4,10 @@ namespace App\Enums;
 
 enum SelectorType: string
 {
-    case AccessibilityId = 'ACCESSIBILITY_ID';
-    case Regex           = 'REGEX';
-    case ContentDesc     = 'CONTENT_DESC';
-    case ClassName       = 'CLASS_NAME';
+    case AccessibilityId = 'accessibility_id';
+    case Regex           = 'regex';
+    case ContentDesc     = 'content_desc';
+    case ClassName       = 'class_name';
 
     public function label(): string
     {

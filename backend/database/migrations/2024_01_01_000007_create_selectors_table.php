@@ -25,7 +25,7 @@ return new class extends Migration
 
         DB::statement("ALTER TABLE selectors ADD CONSTRAINT chk_selectors_app_key CHECK (app_key IN ('uber','99','indrive','ifood'))");
         DB::statement("ALTER TABLE selectors ADD CONSTRAINT chk_selectors_field_type CHECK (field_type IN ('price','distance','time','origin','destination','category'))");
-        DB::statement("ALTER TABLE selectors ADD CONSTRAINT chk_selectors_selector_type CHECK (selector_type IN ('ACCESSIBILITY_ID','REGEX','CONTENT_DESC','CLASS_NAME'))");
+        DB::statement("ALTER TABLE selectors ADD CONSTRAINT chk_selectors_selector_type CHECK (selector_type IN ('accessibility_id','regex','content_desc','class_name'))");
         DB::statement('CREATE INDEX idx_selectors_version_app ON selectors (version_id, app_key)');
         DB::statement('CREATE INDEX idx_selectors_app_field ON selectors (app_key, field_type, is_active)');
         DB::statement('CREATE INDEX idx_selectors_is_active ON selectors (is_active)');

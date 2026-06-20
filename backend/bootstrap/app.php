@@ -22,6 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Traefik termina SSL e repassa HTTP interno — confiar em todos os proxies da rede overlay
+        $middleware->trustProxies(at: '*');
+
         $middleware->append(SecurityHeadersMiddleware::class);
 
         $middleware->alias([

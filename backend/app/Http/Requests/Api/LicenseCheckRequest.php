@@ -14,9 +14,9 @@ class LicenseCheckRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'deviceId'      => ['required', 'string', 'size:64'],
-            'packageName'   => ['required', 'string', 'max:100'],
-            'purchaseToken' => ['nullable', 'string', 'max:500'],
+            'device_id'      => ['required', 'string', 'size:64'],
+            'package_name'   => ['required', 'string', 'max:100'],
+            'purchase_token' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

@@ -29,17 +29,22 @@ RUN docker-php-ext-install \
     xml \
     opcache
 
-RUN pecl install redis && docker-php-ext-enable redis
+COPY --from=mlocati/php-extension-installer:latest /usr/bin/install-php-extensions /usr/local/bin/
+RUN install-php-extensions redis
 
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
-COPY composer.json composer.lock ./
+COPY composer.json ./
 
 RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 
 COPY . .
 
-RUN composer dump-autoload --optimize
+# .env temporário só para o package:discover não falhar durante o build.
+# Em runtime, as variáveis vêm do Docker Swarm / Portainer.
+RUN echo "APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" > .env \
+    && composer dump-autoload --optimize \
+    && rm -f .env
 
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache

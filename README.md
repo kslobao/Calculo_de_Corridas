@@ -1,3 +1,12 @@
+Próximos passos obrigatórios antes de compilar
+Firebase: Substitua app/google-services.json pelo arquivo real do console Firebase
+AdMob: Atualize os IDs em app/src/main/res/values/strings.xml — campos admob_*
+API: Substitua BuildConfig.API_BASE_URL em app/build.gradle.kts pela URL real do seu backend
+Play Billing: Configure os produtos monthly_pro e yearly_pro no Google Play Console
+Ícone: Adicione ic_launcher em res/mipmap-*/ (o Android Studio gera via Asset Studio)
+Backend: Implemente os 3 endpoints da API (/api/v1/selectors, /api/v1/license/check, /api/v1/parser/report)
+
+
 # Cálculo de Corridas — App Android
 
 Aplicativo Android para **motoristas de aplicativo** (Uber Driver, 99 Motorista, inDrive, iFood Entregador) que monitora ofertas de corrida em tempo real via `AccessibilityService` e exibe um overlay flutuante com os dados extraídos — sem necessidade de root.

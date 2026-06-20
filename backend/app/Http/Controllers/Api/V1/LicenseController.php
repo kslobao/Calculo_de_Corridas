@@ -20,7 +20,7 @@ class LicenseController extends Controller
 
         $result = $this->licenseService->check(
             $device,
-            $request->input('purchaseToken'),
+            $request->input('purchase_token'),
         );
 
         return response()->json($result);

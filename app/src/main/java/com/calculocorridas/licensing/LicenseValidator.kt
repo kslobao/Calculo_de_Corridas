@@ -31,14 +31,31 @@ class LicenseValidator @Inject constructor(
         }
     }
 
+    // Called after a successful Google Play purchase or to restore purchases.
+    // Uses POST /api/v1/subscription/validate which validates directly with Google Play API.
+    suspend fun validateAndActivate(productId: String, purchaseToken: String): Boolean {
+        val result = licenseRepository.validateSubscription(productId, purchaseToken)
+        if (result.isSuccess) {
+            val license = result.getOrNull()
+            if (license != null) {
+                licenseRepository.saveCached(license)
+                _license.value = license
+                return license.isPro()
+            }
+        }
+        return false
+    }
+
     suspend fun loadCached() {
         licenseRepository.getCached()?.let { _license.value = it }
     }
 
+    private fun License.isPro() = isValid && plan == LicensePlan.PRO
+
     private fun freeLicense() = License(
-        active = false,
-        plan = LicensePlan.FREE,
+        active    = false,
+        plan      = LicensePlan.FREE,
         expiresAt = 0L,
-        features = LicenseFeatures.free()
+        features  = LicenseFeatures.free()
     )
 }

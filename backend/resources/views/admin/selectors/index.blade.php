@@ -104,5 +104,7 @@
 @endsection
 
 @push('scripts')
+@if($selectors->count() > 0)
 <script>$('#selectors-table').DataTable({ pageLength: 25, language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/pt-BR.json' } });</script>
+@endif
 @endpush

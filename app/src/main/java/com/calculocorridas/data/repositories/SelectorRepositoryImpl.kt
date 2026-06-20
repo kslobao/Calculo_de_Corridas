@@ -1,9 +1,10 @@
 package com.calculocorridas.data.repositories
 
+import com.calculocorridas.data.DeviceRegistrar
 import com.calculocorridas.data.database.dao.SelectorCacheDao
 import com.calculocorridas.data.database.entities.SelectorCacheEntity
 import com.calculocorridas.data.network.ApiService
-import com.calculocorridas.data.network.dto.ParserFailureRequest
+import com.calculocorridas.data.network.dto.ParserReportRequest
 import com.calculocorridas.domain.entities.AppSelectors
 import com.calculocorridas.domain.entities.SelectorConfig
 import com.calculocorridas.domain.entities.SelectorPattern
@@ -15,10 +16,12 @@ import javax.inject.Singleton
 @Singleton
 class SelectorRepositoryImpl @Inject constructor(
     private val api: ApiService,
-    private val dao: SelectorCacheDao
+    private val dao: SelectorCacheDao,
+    private val deviceRegistrar: DeviceRegistrar
 ) : SelectorRepository {
 
     override suspend fun getRemote(): Result<SelectorConfig> = runCatching {
+        deviceRegistrar.ensureRegistered()
         val currentVersion = dao.getCurrentVersion() ?: 0
         val response = api.getSelectors(currentVersion)
         when {
@@ -38,12 +41,12 @@ class SelectorRepositoryImpl @Inject constructor(
     override suspend fun saveCached(config: SelectorConfig) {
         val entities = mutableListOf<SelectorCacheEntity>()
         config.apps.forEach { (appKey, selectors) ->
-            entities.addAll(toEntities(config.version, appKey, "price", selectors.pricePatterns))
-            entities.addAll(toEntities(config.version, appKey, "distance", selectors.distancePatterns))
-            entities.addAll(toEntities(config.version, appKey, "time", selectors.timePatterns))
-            entities.addAll(toEntities(config.version, appKey, "origin", selectors.originPatterns))
+            entities.addAll(toEntities(config.version, appKey, "price",       selectors.pricePatterns))
+            entities.addAll(toEntities(config.version, appKey, "distance",    selectors.distancePatterns))
+            entities.addAll(toEntities(config.version, appKey, "time",        selectors.timePatterns))
+            entities.addAll(toEntities(config.version, appKey, "origin",      selectors.originPatterns))
             entities.addAll(toEntities(config.version, appKey, "destination", selectors.destinationPatterns))
-            entities.addAll(toEntities(config.version, appKey, "category", selectors.categoryPatterns))
+            entities.addAll(toEntities(config.version, appKey, "category",    selectors.categoryPatterns))
         }
         dao.insertAll(entities)
         dao.deactivateAllExcept(config.version)
@@ -64,15 +67,18 @@ class SelectorRepositoryImpl @Inject constructor(
         return true
     }
 
-    override suspend fun reportParserFailure(appKey: String, patternType: String, selectorVersion: Int) {
+    override suspend fun reportParserFailure(
+        appKey: String,
+        patternType: String,
+        selectorVersion: Int
+    ) {
         runCatching {
             api.reportParserFailure(
-                ParserFailureRequest(
-                    appKey = appKey,
+                ParserReportRequest(
+                    appKey          = appKey,
                     selectorVersion = selectorVersion,
-                    failedPattern = patternType,
-                    eventType = "TYPE_WINDOW_CONTENT_CHANGED",
-                    timestamp = System.currentTimeMillis()
+                    success         = false,
+                    errorMessage    = "Pattern not matched: $patternType"
                 )
             )
         }
@@ -96,12 +102,12 @@ class SelectorRepositoryImpl @Inject constructor(
         version: Int, appKey: String, patternType: String, patterns: List<SelectorPattern>
     ): List<SelectorCacheEntity> = patterns.map { p ->
         SelectorCacheEntity(
-            version = version,
-            appKey = appKey,
-            patternType = patternType,
-            pattern = p.value,
+            version      = version,
+            appKey       = appKey,
+            patternType  = patternType,
+            pattern      = p.value,
             selectorType = p.type.key,
-            priority = p.priority
+            priority     = p.priority
         )
     }
 }

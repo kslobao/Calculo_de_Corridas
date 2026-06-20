@@ -20,19 +20,17 @@ enum LicensePlan: string
         return match($this) {
             self::Free => [
                 'ads_free'          => false,
-                'advanced_rules'    => false,
-                'export_enabled'    => false,
-                'history_unlimited' => false,
-                'max_rides'         => 500,
-                'history_days'      => 30,
+                'unlimited_history' => false,
+                'cloud_backup'      => false,
+                'export'            => false,
+                'multi_vehicle'     => false,
             ],
             self::Pro => [
                 'ads_free'          => true,
-                'advanced_rules'    => true,
-                'export_enabled'    => true,
-                'history_unlimited' => true,
-                'max_rides'         => -1,
-                'history_days'      => -1,
+                'unlimited_history' => true,
+                'cloud_backup'      => true,
+                'export'            => true,
+                'multi_vehicle'     => true,
             ],
         };
     }

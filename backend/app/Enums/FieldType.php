@@ -26,12 +26,12 @@ enum FieldType: string
     public function androidKey(): string
     {
         return match($this) {
-            self::Price       => 'pricePatterns',
-            self::Distance    => 'distancePatterns',
-            self::Time        => 'timePatterns',
-            self::Origin      => 'originPatterns',
-            self::Destination => 'destinationPatterns',
-            self::Category    => 'categoryPatterns',
+            self::Price       => 'price_patterns',
+            self::Distance    => 'distance_patterns',
+            self::Time        => 'time_patterns',
+            self::Origin      => 'origin_patterns',
+            self::Destination => 'destination_patterns',
+            self::Category    => 'category_patterns',
         };
     }
 }

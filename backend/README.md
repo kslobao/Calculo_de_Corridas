@@ -10,47 +10,36 @@ API REST para o app Android **Cálculo de Corridas**, com painel administrativo 
 | Framework | Laravel 11 |
 | Banco de dados | PostgreSQL 16 |
 | Cache / Filas | Redis 7 |
-| Servidor web | Nginx 1.25 |
+| Servidor web | Nginx 1.25 (imagem customizada) |
 | Contêinerização | Docker Swarm |
-| Admin panel | Bootstrap 5.3 |
+| Admin panel | Bootstrap 5.3 + DataTables |
 
 ## Arquitetura
 
 ```
-Android App
+Internet
     │
     ▼
-Nginx (2 réplicas)
+Traefik (80/443 — TLS via Let's Encrypt)
     │
+    ▼
+Nginx customizado (2 réplicas — sem portas públicas)
+    │  docker/nginx/Dockerfile + default.conf embutido
     ▼
 PHP-FPM / Laravel 11 (3 réplicas)
-    ├── Redis (cache + filas)
+    ├── Redis 7 (cache + filas)
     ├── PostgreSQL 16
     └── Queue Worker (2 réplicas) ──► Google Play Developer API
 ```
 
-### Sistema de licenças — prioridade
+> O Nginx não expõe portas ao host. O Traefik é o único edge router e faz SSL termination.
 
-```
-Dispositivo faz POST /api/v1/license/check
-    │
-    ▼
-1. Existe licença manual ativa? (gift / partner / beta / admin)
-   └─► SIM → retorna PRO imediatamente (Google não é consultado)
-    │
-    ▼
-2. purchaseToken enviado?
-   └─► SIM → valida no Google Play → salva/atualiza Subscription + License
-    │
-    ▼
-3. Existe licença Google válida no banco?
-   └─► SIM → retorna PRO
-    │
-    ▼
-4. Retorna FREE
-```
+## Duas imagens Docker
 
-**Assinaturas pertencem ao usuário**, não ao dispositivo. Um único `purchaseToken` cobre todos os dispositivos vinculados ao mesmo `user_id`.
+| Imagem | Dockerfile | Conteúdo |
+|---|---|---|
+| `calc-corridas-app` | `docker/php/Dockerfile` | PHP-FPM + Laravel |
+| `calc-corridas-nginx` | `docker/nginx/Dockerfile` | Nginx + config embutida |
 
 ## Endpoints da API
 
@@ -58,19 +47,18 @@ Dispositivo faz POST /api/v1/license/check
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `GET` | `/health` | Saúde geral |
-| `GET` | `/health/database` | Conectividade com PostgreSQL |
-| `GET` | `/health/redis` | Conectividade com Redis |
+| `GET` | `/up` | Health check do Laravel |
+| `GET` | `/nginx-health` | Health check do Nginx (retorna `ok`) |
 | `POST` | `/api/v1/google/rtdn` | Webhook RTDN do Google Pub/Sub |
 
 ### Android — autenticação por Device Token
 
-O token é `SHA256(ANDROID_ID + packageName)`, enviado como `Authorization: Bearer <token>`.
+Token = `SHA256(ANDROID_ID + packageName)`, enviado como `Authorization: Bearer <token>`.
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `POST` | `/api/v1/device/register` | Registra ou atualiza dispositivo |
-| `GET` | `/api/v1/selectors` | Seletores remotos de acessibilidade (304 se atual) |
+| `POST` | `/api/v1/device/register` | Registra dispositivo (deve ser a primeira chamada) |
+| `GET` | `/api/v1/selectors?version=N` | Seletores remotos (304 se versão atual) |
 | `POST` | `/api/v1/license/check` | Verifica e retorna plano ativo |
 | `POST` | `/api/v1/subscription/validate` | Valida purchase token no Google Play |
 | `POST` | `/api/v1/parser/report` | Envia relatório de falha de parser |
@@ -78,7 +66,7 @@ O token é `SHA256(ANDROID_ID + packageName)`, enviado como `Authorization: Bear
 
 ### Admin panel
 
-Acessível via `/admin`. Autenticação JWT armazenada em cookie HTTP-only.
+Acessível via `/admin`. Autenticação JWT em cookie HTTP-only `admin_token`.
 
 | Seção | URL |
 |---|---|
@@ -100,171 +88,188 @@ Acessível via `/admin`. Autenticação JWT armazenada em cookie HTTP-only.
 users              — Usuários (UUID, SoftDeletes, multi-dispositivo)
 admin_users        — Admins do painel (roles: admin / editor / viewer)
 devices            — Dispositivos Android registrados
-licenses           — Licenças manuais e Google Play (prioridade manual)
+licenses           — Licenças manuais e Google Play
 subscriptions      — Assinaturas Google Play com estado completo
-selector_versions  — Versões dos seletores (apenas 1 ativa via UNIQUE parcial)
-selectors          — Padrões por app × campo × tipo de seletor
+selector_versions  — Versões dos seletores (1 ativa via UNIQUE parcial)
+selectors          — Padrões por app × campo × tipo (valores sempre lowercase)
 parser_reports     — Relatórios de falha enviados pelo app
 app_config         — Configuração remota com cache Redis
 audit_logs         — Log de todas as ações administrativas
 ```
 
+### Sistema de licenças — prioridade
+
+```
+POST /api/v1/license/check
+  1. Licença manual ativa? (gift/partner/beta/admin) → PRO imediatamente
+  2. purchase_token enviado? → valida no Google Play → salva → PRO
+  3. Licença Google válida no banco? → PRO
+  4. Retorna FREE
+```
+
+Assinaturas pertencem ao **usuário**, não ao dispositivo. Um `purchaseToken` cobre todos os dispositivos do mesmo `user_id`.
+
 ## Deploy com Docker Swarm
 
-### Pré-requisitos
-
-- Docker Engine ≥ 24 em modo Swarm (`docker swarm init`)
-- Portainer CE ou BE (opcional, mas recomendado)
-- Rede `traefik_public` externa criada: `docker network create --driver overlay traefik_public`
-
-### 1. Configurar variáveis de ambiente
+### Pré-requisitos no servidor
 
 ```bash
-cp .env.example .env
-# Editar .env com os valores de produção
-```
+# Swarm já inicializado
+docker swarm init
 
-Variáveis obrigatórias:
+# Rede externa do Traefik
+docker network create --driver overlay traefik_public
 
-```env
-APP_KEY=base64:...          # php artisan key:generate --show
-JWT_SECRET=...              # php artisan jwt:secret --show
-DB_DATABASE=calc_corridas
-DB_USERNAME=laravel
-DB_PASSWORD=senha_forte
-REDIS_PASSWORD=senha_redis
-APP_URL=https://api.seudominio.com
-GOOGLE_PLAY_PACKAGE_NAME=com.calculocorridas
-GOOGLE_PLAY_PRODUCT_ID=pro_monthly
-GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
-RTDN_PUBSUB_TOKEN=token_secreto_pubsub
-ADMIN_DEFAULT_EMAIL=admin@seudominio.com
-ADMIN_DEFAULT_PASSWORD=senha_admin_forte
-```
-
-### 2. Criar diretórios de dados
-
-```bash
+# Diretórios de dados persistentes
 mkdir -p /opt/calc-corridas/{postgres,redis,storage,logs}
 ```
 
-### 3. Criar config do Nginx no Swarm
+### 1. Gerar segredos
 
 ```bash
-docker config create nginx_conf_v1 ./docker/nginx/default.conf
+# APP_KEY
+docker run --rm registry.hostdatec.com.br/calc-corridas-app:v1.0.0 \
+  php artisan key:generate --show
+
+# JWT_SECRET
+openssl rand -hex 32
+
+# REDIS_PASSWORD e DB_PASSWORD
+openssl rand -hex 16
+
+# RTDN_PUBSUB_TOKEN
+openssl rand -hex 24
 ```
 
-### 4. Construir e publicar a imagem
+### 2. Build e push das duas imagens
 
 ```bash
-docker build -t registry.seudominio.com/calc-corridas-app:latest -f docker/php/Dockerfile .
-docker push registry.seudominio.com/calc-corridas-app:latest
+cd backend/
+
+# Imagem PHP-FPM
+docker build -t registry.hostdatec.com.br/calc-corridas-app:v1.0.0 \
+  -f docker/php/Dockerfile .
+docker push registry.hostdatec.com.br/calc-corridas-app:v1.0.0
+
+# Imagem Nginx (config já embutida)
+docker build -t registry.hostdatec.com.br/calc-corridas-nginx:v1.0.0 \
+  -f docker/nginx/Dockerfile docker/nginx/
+docker push registry.hostdatec.com.br/calc-corridas-nginx:v1.0.0
 ```
 
-### 5. Deploy
+### 3. Deploy via Portainer
+
+1. **Stacks → Add Stack**
+2. Cole o conteúdo do `stack.yml`
+3. Em **Environment variables** → **Load variables from .env file** → selecione seu `.env`
+4. **Deploy the stack**
+
+> Certifique-se de que `REGISTRY`, `IMAGE_TAG`, `DOMAIN` e todas as variáveis obrigatórias estão preenchidas.
+
+### 4. Migrations e seed inicial
 
 ```bash
-# Via CLI
-REGISTRY=registry.seudominio.com IMAGE_TAG=latest docker stack deploy -c stack.yml calc-corridas
+# Após o deploy, identificar o container
+docker ps --format "{{.ID}} {{.Names}}" | grep app
 
-# Via Portainer → Stacks → Add Stack → Upload stack.yml
-```
-
-### 6. Migrations e seed inicial
-
-```bash
-# Executa no contêiner app após o deploy
-docker exec -it $(docker ps -qf name=calc-corridas_app) \
+# Rodar migrations + seed
+docker exec -it $(docker ps -qf "name=calculo_de_corridas_app" | head -1) \
   php artisan migrate --seed --force
 ```
 
-### Atualização rolling (zero downtime)
+Se a migration já foi rodada parcialmente e o seed falhou:
 
 ```bash
-docker build -t registry.seudominio.com/calc-corridas-app:v1.1.0 .
-docker push registry.seudominio.com/calc-corridas-app:v1.1.0
-IMAGE_TAG=v1.1.0 docker stack deploy -c stack.yml calc-corridas
+# Corrigir constraint manualmente (só na primeira instalação problemática)
+docker exec -it $(docker ps -qf "name=calculo_de_corridas_postgres" | head -1) \
+  psql -U corridas_user -d calculo_corridas -c "
+ALTER TABLE selectors DROP CONSTRAINT IF EXISTS chk_selectors_selector_type;
+ALTER TABLE selectors ADD CONSTRAINT chk_selectors_selector_type
+  CHECK (selector_type IN ('accessibility_id','regex','content_desc','class_name'));
+"
+
+# Re-seed só dos seletores
+docker exec -it $(docker ps -qf "name=calculo_de_corridas_app" | head -1) \
+  php artisan db:seed --class=SelectorVersionSeeder --force
 ```
 
-## Desenvolvimento local
-
-Para desenvolvimento sem Swarm, use Docker Compose convencional:
+### 5. Atualização rolling (zero downtime)
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d
-php artisan migrate --seed
-php artisan serve
+# Build das novas imagens
+docker build -t registry.hostdatec.com.br/calc-corridas-app:v1.1.0 \
+  -f docker/php/Dockerfile .
+docker push registry.hostdatec.com.br/calc-corridas-app:v1.1.0
+
+# Só se o Nginx config mudou:
+docker build -t registry.hostdatec.com.br/calc-corridas-nginx:v1.1.0 \
+  -f docker/nginx/Dockerfile docker/nginx/
+docker push registry.hostdatec.com.br/calc-corridas-nginx:v1.1.0
+
+# Rolling update (start-first: nova réplica sobe antes de derrubar a antiga)
+docker service update \
+  --image registry.hostdatec.com.br/calc-corridas-app:v1.1.0 \
+  app_calculo_de_corridas_app
+
+docker service update \
+  --image registry.hostdatec.com.br/calc-corridas-nginx:v1.1.0 \
+  app_calculo_de_corridas_nginx
 ```
 
-> O `stack.yml` é exclusivo para Swarm/Portainer. Não funciona com `docker-compose up`.
+## Monitoramento
+
+```bash
+# Status dos serviços
+docker stack services app_calculo_de_corridas
+
+# Logs em tempo real (Laravel loga para stderr)
+docker service logs -f app_calculo_de_corridas_app
+docker service logs -f app_calculo_de_corridas_queue-worker
+
+# Health checks
+curl https://api.calculocorridas.com/up
+curl https://api.calculocorridas.com/nginx-health
+```
+
+> **Nota:** `LOG_CHANNEL=stderr` — os logs do Laravel aparecem via `docker logs` / `docker service logs`, não em arquivo. Não existe `storage/logs/laravel.log` em produção.
 
 ## Seletores remotos
 
-Os seletores são padrões usados pelo `AccessibilityService` do Android para extrair dados das corridas. Gerenciados pelo painel em `/admin/selectors`.
+Padrões usados pelo `AccessibilityService` Android para extrair dados das corridas. Gerenciados em `/admin/selectors`.
 
-- **ACCESSIBILITY_ID** — `resourceId` do elemento (`com.ubercab.driver:id/price`)
-- **REGEX** — expressão regular aplicada ao texto (`R\$\s*([\d.,]+)`)
-- **CONTENT_DESC** — texto do `contentDescription`
-- **CLASS_NAME** — classe do `View`
+| Tipo | Valor no banco | Descrição |
+|---|---|---|
+| `accessibility_id` | lowercase | `resourceId` do elemento |
+| `regex` | lowercase | Expressão regular aplicada ao texto |
+| `content_desc` | lowercase | `contentDescription` do elemento |
+| `class_name` | lowercase | Classe do `View` |
 
-Ao publicar uma nova versão, todos os dispositivos recebem os seletores atualizados automaticamente na próxima requisição `GET /api/v1/selectors` (resposta `200`). Versão já atual retorna `304 Not Modified`.
+> ⚠️ **Sempre lowercase** — tanto no banco quanto no wire format. A constraint PostgreSQL e o enum Android esperam lowercase. Nunca inserir uppercase.
 
-## Google Play Billing
+Ao publicar nova versão, todos os dispositivos recebem os seletores atualizados na próxima chamada `GET /api/v1/selectors`. Versão já atual retorna `304 Not Modified`.
 
-### Fluxo RTDN (Real-time Developer Notifications)
+## Google Play Billing — RTDN
 
 ```
 Google Pub/Sub
     │ POST /api/v1/google/rtdn?token=RTDN_PUBSUB_TOKEN
     ▼
 GoogleRtdnController → retorna 200 imediatamente
-    │
-    ▼ (assíncrono)
-ProcessRtdnNotification (queue: rtdn)
-    │
-    ├── GooglePlayService → purchases.subscriptions.get
-    └── SubscriptionService → atualiza Subscription + License no banco
+    │ (assíncrono via fila rtdn)
+    ▼
+ProcessRtdnNotification → GooglePlayService → atualiza Subscription + License
 ```
 
-### Configurar Pub/Sub no Google Cloud
-
-1. Criar tópico Pub/Sub para RTDN nas configurações do Google Play Console
-2. Criar assinatura Push apontando para `https://api.seudominio.com/api/v1/google/rtdn?token=SEU_TOKEN`
+**Configurar Pub/Sub:**
+1. Google Play Console → Monetização → Real-time notifications → criar tópico
+2. Criar assinatura Push para `https://api.calculocorridas.com/api/v1/google/rtdn?token=SEU_TOKEN`
 3. Definir `RTDN_PUBSUB_TOKEN` no `.env`
-
-## Estrutura de diretórios relevante
-
-```
-backend/
-├── app/
-│   ├── Console/Commands/      # SyncExpiredSubscriptions, CleanOldParserReports
-│   ├── Enums/                 # LicensePlan, LicenseSource, AppKey, FieldType...
-│   ├── Http/
-│   │   ├── Controllers/Api/   # Endpoints Android
-│   │   ├── Controllers/Admin/ # Painel administrativo
-│   │   ├── Middleware/        # DeviceAuth, AdminJwt, SecurityHeaders, Maintenance
-│   │   └── Requests/          # Form requests com validação
-│   ├── Jobs/                  # ProcessRtdnNotification, ValidateGoogleSubscription
-│   ├── Models/                # 10 modelos Eloquent
-│   ├── Repositories/          # Device, License, Selector repositories
-│   └── Services/              # GooglePlay, License, Subscription, Rtdn...
-├── database/migrations/       # 10 migrations
-├── database/seeders/          # Admin, AppConfig, SelectorVersion seeders
-├── docker/
-│   ├── nginx/default.conf
-│   └── php/Dockerfile
-├── resources/views/admin/     # Blade views Bootstrap 5
-├── routes/
-│   ├── api.php                # Rotas Android
-│   └── web.php                # Painel admin
-└── stack.yml                  # Docker Swarm deploy
-```
 
 ## Segurança
 
-- Rate limiting por IP: 60 req/min (API geral), 10 req/min (registro), 120 req/min (RTDN)
-- Device Token validado em cada requisição; bloqueio imediato refletido em tempo real
+- Device Token validado em cada requisição via `DeviceAuthMiddleware`
 - JWT admin em cookie `HttpOnly; Secure; SameSite=Strict`; TTL 480 min
-- Headers de segurança: `X-Frame-Options`, `X-Content-Type-Options`, HSTS (produção)
-- Todas as ações do painel logadas em `audit_logs` com IP, valores antigos e novos
-- Credenciais Google (`GOOGLE_SERVICE_ACCOUNT_JSON`) nunca expostas em logs
+- Rate limiting por IP: 60 req/min API, 30 req/min admin
+- Headers: `X-Frame-Options`, `X-Content-Type-Options`, `HSTS`
+- Todas as ações do painel logadas em `audit_logs` com IP e diff old/new
+- `GOOGLE_SERVICE_ACCOUNT_JSON` nunca exposto em logs
