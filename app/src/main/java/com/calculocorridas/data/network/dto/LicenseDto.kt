@@ -10,6 +10,8 @@ import java.util.Locale
 // ─── License check ───────────────────────────────────────────────────────────
 
 data class LicenseCheckRequest(
+    @SerializedName("device_id")      val deviceId: String,
+    @SerializedName("package_name")   val packageName: String,
     @SerializedName("purchase_token") val purchaseToken: String?
 )
 

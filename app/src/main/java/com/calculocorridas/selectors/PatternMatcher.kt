@@ -21,6 +21,20 @@ class PatternMatcher @Inject constructor() {
         return null
     }
 
+    // Versão que busca em lista de strings puras (ex: textos de notificação)
+    fun matchFromTexts(texts: List<String>, patterns: List<SelectorPattern>): String? {
+        val sorted = patterns.sortedByDescending { it.priority }
+        for (pattern in sorted) {
+            if (pattern.type != SelectorType.REGEX) continue
+            val compiled = runCatching { Pattern.compile(pattern.value) }.getOrNull() ?: continue
+            for (text in texts) {
+                val m = compiled.matcher(text)
+                if (m.find()) return if (m.groupCount() > 0) m.group(1) else m.group(0)
+            }
+        }
+        return null
+    }
+
     private fun tryMatch(root: AccessibilityNodeInfo, pattern: SelectorPattern): String? =
         when (pattern.type) {
             SelectorType.ACCESSIBILITY_ID -> matchByViewId(root, pattern.value)

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- cache: ZIPs de exportação -->
+    <cache-path name="cache" path="." />
+    <!-- external-files: dumps do Inspector -->
+    <external-files-path name="inspector_dumps" path="accessibility_dumps/" />
+</paths>

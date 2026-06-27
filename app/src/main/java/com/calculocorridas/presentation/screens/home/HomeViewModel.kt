@@ -2,6 +2,7 @@ package com.calculocorridas.presentation.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.calculocorridas.domain.entities.LicensePlan
 import com.calculocorridas.domain.entities.Ride
 import com.calculocorridas.domain.repositories.RideRepository
 import com.calculocorridas.licensing.LicenseValidator
@@ -59,7 +60,7 @@ class HomeViewModel @Inject constructor(
 
     private fun observeLicense() {
         licenseValidator.license
-            .onEach { _uiState.value = _uiState.value.copy(isPro = it.isValid) }
+            .onEach { _uiState.value = _uiState.value.copy(isPro = it.isValid && it.plan == LicensePlan.PRO) }
             .launchIn(viewModelScope)
     }
 

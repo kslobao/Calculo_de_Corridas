@@ -96,6 +96,29 @@
                 android:value="Monitora e reinicia serviços essenciais" />
         </service>
 
+        <!-- Desativa auto-init do WorkManager para que o HiltWorkerFactory seja usado -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <!-- FileProvider para compartilhar dumps do Inspector -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- BroadcastReceiver para boot -->
         <receiver
             android:name=".services.watchdog.BootReceiver"

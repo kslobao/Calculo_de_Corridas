@@ -37,7 +37,15 @@ class LicenseRepositoryImpl @Inject constructor(
 
     override suspend fun checkRemote(purchaseToken: String?): Result<License> = runCatching {
         deviceRegistrar.ensureRegistered()
-        val response = api.checkLicense(LicenseCheckRequest(purchaseToken = purchaseToken))
+        // backend valida 64 chars → usa sempre o device_token (SHA-256), não o UUID
+        val deviceId = deviceRegistrar.getDeviceToken()
+        val response = api.checkLicense(
+            LicenseCheckRequest(
+                deviceId      = deviceId,
+                packageName   = context.packageName,
+                purchaseToken = purchaseToken
+            )
+        )
         if (response.isSuccessful) {
             response.body()?.toDomain() ?: error("Empty license response")
         } else {

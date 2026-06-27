@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -48,6 +49,10 @@ class SelectorSyncWorker @AssistedInject constructor(
                 ExistingPeriodicWorkPolicy.KEEP,
                 request
             )
+        }
+
+        fun scheduleImmediate(workManager: WorkManager) {
+            workManager.enqueue(OneTimeWorkRequestBuilder<SelectorSyncWorker>().build())
         }
     }
 }

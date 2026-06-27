@@ -61,12 +61,12 @@ class OverlayView(context: Context) : LinearLayout(context) {
         tvClassification = addLabel("", 16f, Color.WHITE).apply {
             setPadding(0, 4, 0, 8)
         }
-        tvValue        = addMetricRow("Valor:", "")
-        tvDistance     = addMetricRow("KM:", "")
-        tvDuration     = addMetricRow("Tempo:", "")
-        tvValuePerKm   = addMetricRow("R$/KM:", "")
-        tvValuePerHour = addMetricRow("R$/Hora:", "")
-        tvProfit       = addMetricRow("Lucro:", "")
+        tvValue        = addMetricRow("Valor:",  "")
+        tvDistance     = addMetricRow("KM:",     "")
+        tvDuration     = addMetricRow("Tempo:",  "")
+        tvValuePerKm   = addMetricRow("R$/km:",  "")
+        tvValuePerHour = addMetricRow("R$/hora:", "")
+        tvProfit       = addMetricRow("Lucro:",  "")
 
         setupDragAndDismiss()
     }
@@ -83,9 +83,10 @@ class OverlayView(context: Context) : LinearLayout(context) {
     }
 
     private fun addMetricRow(label: String, value: String): TextView {
+        val dp = context.resources.displayMetrics.density
         val row = LinearLayout(context).apply {
             orientation = HORIZONTAL
-            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).also {
+            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).also {
                 it.topMargin = 4
             }
         }
@@ -93,12 +94,17 @@ class OverlayView(context: Context) : LinearLayout(context) {
             text = label
             textSize = 13f
             setTextColor(Color.parseColor("#AAAAAA"))
-            layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+            minimumWidth = (58 * dp).toInt()
+            isSingleLine = true
+            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).also {
+                it.marginEnd = (6 * dp).toInt()
+            }
         }
         val valueTv = TextView(context).apply {
             text = value
             textSize = 13f
             setTextColor(Color.WHITE)
+            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
         }
         row.addView(labelTv)
         row.addView(valueTv)

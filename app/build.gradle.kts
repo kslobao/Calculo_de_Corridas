@@ -29,7 +29,7 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             isDebuggable = true
-            buildConfigField("String", "API_BASE_URL", "\"https://api-dev.calculocorridas.com/\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://apic.hostdatec.com.br/\"")
             buildConfigField("String", "ADMOB_APP_ID", "\"ca-app-pub-3940256099942544~3347511713\"")
         }
         release {
@@ -124,9 +124,10 @@ dependencies {
     // Billing
     implementation(libs.billing)
 
-    // Charts
-    implementation(libs.vico.compose)
-
     // Security
     implementation(libs.security.crypto)
+
+    // OCR local — ML Kit Text Recognition (Latin, sem rede)
+    implementation(libs.mlkit.text.recognition)
+    implementation(libs.coroutines.play.services)
 }

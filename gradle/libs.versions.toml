@@ -24,6 +24,7 @@ vico                   = "2.0.0-beta.2"
 security-crypto        = "1.1.0-alpha06"
 gson                   = "2.11.0"
 core-ktx               = "1.15.0"
+mlkit-text-recognition = "16.0.1"
 
 [libraries]
 # AndroidX Core
@@ -94,6 +95,12 @@ vico-compose           = { group = "com.patrykandpatrick.vico", name = "compose-
 
 # Security
 security-crypto        = { group = "androidx.security", name = "security-crypto", version.ref = "security-crypto" }
+
+# ML Kit — OCR local (sem rede, modelo Latin embutido no APK)
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkit-text-recognition" }
+
+# Coroutines Play Services (Task.await())
+coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
 [plugins]
 android-application    = { id = "com.android.application", version.ref = "agp" }

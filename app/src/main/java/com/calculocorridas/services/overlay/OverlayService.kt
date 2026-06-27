@@ -5,9 +5,12 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import com.calculocorridas.R
@@ -19,6 +22,9 @@ class OverlayService : Service() {
 
     private var windowManager: WindowManager? = null
     private var overlayView: OverlayView? = null
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val hideRunnable = Runnable { hideOverlay() }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -53,9 +59,17 @@ class OverlayService : Service() {
         } else {
             overlayView?.update(data)
         }
+
+        // Auto-hide após 30 segundos sem novo card
+        handler.removeCallbacks(hideRunnable)
+        handler.postDelayed(hideRunnable, AUTO_HIDE_MS)
     }
 
     private fun createOverlayView(data: OverlayData) {
+        if (!Settings.canDrawOverlays(this)) {
+            Log.w("OverlayService", "SYSTEM_ALERT_WINDOW not granted — overlay skipped")
+            return
+        }
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -78,10 +92,12 @@ class OverlayService : Service() {
             }
         }
 
-        windowManager?.addView(overlayView, params)
+        runCatching { windowManager?.addView(overlayView, params) }
+            .onFailure { Log.e("OverlayService", "Failed to add overlay view", it) }
     }
 
     private fun hideOverlay() {
+        handler.removeCallbacks(hideRunnable)
         overlayView?.let {
             windowManager?.removeView(it)
             overlayView = null
@@ -120,5 +136,6 @@ class OverlayService : Service() {
         const val EXTRA_NET_PROFIT    = "extra_net_profit"
         const val EXTRA_CLASSIFICATION= "extra_classification"
         const val NOTIFICATION_ID     = 1001
+        private const val AUTO_HIDE_MS = 15_000L // 15 segundos
     }
 }

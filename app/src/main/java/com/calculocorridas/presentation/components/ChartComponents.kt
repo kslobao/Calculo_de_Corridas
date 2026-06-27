@@ -1,24 +1,20 @@
 package com.calculocorridas.presentation.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.calculocorridas.domain.entities.DayEarning
 import com.calculocorridas.presentation.theme.PrimaryLight
-import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
-import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
-import com.patrykandpatrick.vico.core.common.shape.Shape
 
 @Composable
 fun EarningsBarChart(
@@ -27,31 +23,25 @@ fun EarningsBarChart(
 ) {
     if (earnings.isEmpty()) return
 
-    val modelProducer = remember { CartesianChartModelProducer() }
-    val values = earnings.map { it.totalValue.toFloat() }
+    val maxValue = earnings.maxOf { it.totalValue }.toFloat().coerceAtLeast(1f)
+    val barShape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
 
-    remember(earnings) {
-        modelProducer.tryRunTransaction {
-            columnSeries { series(values) }
-        }
-    }
-
-    CartesianChartHost(
-        chart = rememberCartesianChart(
-            rememberColumnCartesianLayer(
-                columnProvider = ColumnCartesianLayer.ColumnProvider.series(
-                    ColumnCartesianLayer.Column(
-                        fill = fill(PrimaryLight),
-                        shape = Shape.rounded(topLeftPercent = 4, topRightPercent = 4)
-                    )
-                )
-            ),
-            startAxis = rememberStartAxis(),
-            bottomAxis = rememberBottomAxis()
-        ),
-        modelProducer = modelProducer,
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(160.dp)
-    )
+            .height(160.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        earnings.forEach { day ->
+            val heightFraction = (day.totalValue.toFloat() / maxValue).coerceIn(0.02f, 1f)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(heightFraction)
+                    .clip(barShape)
+                    .background(PrimaryLight)
+            )
+        }
+    }
 }

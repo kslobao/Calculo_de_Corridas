@@ -38,6 +38,8 @@ class UserPreferences @Inject constructor(
         val ACTIVE_VEHICLE_ID     = stringPreferencesKey("active_vehicle_id")
         val LAST_INTERSTITIAL_MS  = stringPreferencesKey("last_interstitial_ms")
         val CONSENT_GIVEN         = booleanPreferencesKey("consent_given")
+        val OCR_ENABLED           = booleanPreferencesKey("ocr_enabled")
+        val OCR_ECONOMIC_MODE     = booleanPreferencesKey("ocr_economic_mode")
     }
 
     val overlayTransparency: Flow<Float> = dataStore.data.map { it[Keys.OVERLAY_TRANSPARENCY] ?: 0.95f }
@@ -49,7 +51,9 @@ class UserPreferences @Inject constructor(
     val minValuePerKm: Flow<Double> = dataStore.data.map { it[Keys.MIN_VALUE_PER_KM] ?: 2.00 }
     val minValuePerHour: Flow<Double> = dataStore.data.map { it[Keys.MIN_VALUE_PER_HOUR] ?: 30.00 }
     val onboardingDone: Flow<Boolean> = dataStore.data.map { it[Keys.ONBOARDING_DONE] ?: false }
-    val consentGiven: Flow<Boolean> = dataStore.data.map { it[Keys.CONSENT_GIVEN] ?: false }
+    val consentGiven: Flow<Boolean>   = dataStore.data.map { it[Keys.CONSENT_GIVEN] ?: false }
+    val ocrEnabled: Flow<Boolean>     = dataStore.data.map { it[Keys.OCR_ENABLED] ?: true }
+    val ocrEconomicMode: Flow<Boolean> = dataStore.data.map { it[Keys.OCR_ECONOMIC_MODE] ?: true }
 
     suspend fun setOverlayTransparency(value: Float) = dataStore.edit { it[Keys.OVERLAY_TRANSPARENCY] = value }
     suspend fun setOverlayAutoClose(seconds: Int) = dataStore.edit { it[Keys.OVERLAY_AUTO_CLOSE_S] = seconds }
@@ -60,7 +64,9 @@ class UserPreferences @Inject constructor(
     suspend fun setMinValuePerKm(value: Double) = dataStore.edit { it[Keys.MIN_VALUE_PER_KM] = value }
     suspend fun setMinValuePerHour(value: Double) = dataStore.edit { it[Keys.MIN_VALUE_PER_HOUR] = value }
     suspend fun setOnboardingDone() = dataStore.edit { it[Keys.ONBOARDING_DONE] = true }
-    suspend fun setConsentGiven(given: Boolean) = dataStore.edit { it[Keys.CONSENT_GIVEN] = given }
+    suspend fun setConsentGiven(given: Boolean)  = dataStore.edit { it[Keys.CONSENT_GIVEN] = given }
+    suspend fun setOcrEnabled(v: Boolean)        = dataStore.edit { it[Keys.OCR_ENABLED] = v }
+    suspend fun setOcrEconomicMode(v: Boolean)   = dataStore.edit { it[Keys.OCR_ECONOMIC_MODE] = v }
     suspend fun setLastInterstitialMs(ms: Long) = dataStore.edit { it[Keys.LAST_INTERSTITIAL_MS] = ms.toString() }
     suspend fun getLastInterstitialMs(): Long =
         dataStore.data.map { it[Keys.LAST_INTERSTITIAL_MS]?.toLongOrNull() ?: 0L }.first()

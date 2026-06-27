@@ -21,6 +21,20 @@ abstract class BaseParser(
 ) {
     abstract val appKey: String
 
+    fun parseFromTexts(texts: List<String>, selectors: AppSelectors): ParsedRide? {
+        val valueText = matcher.matchFromTexts(texts, selectors.pricePatterns)
+        val distText  = matcher.matchFromTexts(texts, selectors.distancePatterns)
+        val timeText  = matcher.matchFromTexts(texts, selectors.timePatterns)
+
+        val value    = valueText?.let { CurrencyParser.parse(it) } ?: return null
+        val distance = distText?.let { DistanceParser.parse(it) } ?: return null
+        val duration = timeText?.let { TimeParser.parseMinutes(it) } ?: return null
+
+        if (value <= 0 || distance <= 0 || duration <= 0) return null
+
+        return ParsedRide(value, distance, duration, origin = null, destination = null, category = null)
+    }
+
     fun parse(root: AccessibilityNodeInfo, selectors: AppSelectors): ParsedRide? {
         val valueText    = matcher.match(root, selectors.pricePatterns)
         val distText     = matcher.match(root, selectors.distancePatterns)

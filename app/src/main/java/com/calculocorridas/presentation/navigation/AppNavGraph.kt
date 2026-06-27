@@ -22,6 +22,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.calculocorridas.presentation.screens.dashboard.DashboardScreen
+import com.calculocorridas.presentation.screens.developer.DeveloperSettingsScreen
+import com.calculocorridas.presentation.screens.developer.InspectorScreen
 import com.calculocorridas.presentation.screens.history.HistoryScreen
 import com.calculocorridas.presentation.screens.home.HomeScreen
 import com.calculocorridas.presentation.screens.rules.RulesScreen
@@ -34,7 +36,9 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object History      : Screen("history", "Histórico", Icons.Default.History)
     object Rules        : Screen("rules", "Regras", Icons.Default.Rule)
     object Settings     : Screen("settings", "Config", Icons.Default.Settings)
-    object Subscription : Screen("subscription", "Pro", Icons.Default.Settings)
+    object Subscription  : Screen("subscription",  "Pro",          Icons.Default.Settings)
+    object Developer     : Screen("developer",     "Desenvolvedor", Icons.Default.Settings)
+    object Inspector     : Screen("inspector",     "Inspector",     Icons.Default.Settings)
 }
 
 val bottomNavItems = listOf(
@@ -53,7 +57,9 @@ fun AppNavGraph() {
 
     Scaffold(
         bottomBar = {
-            if (currentRoute != Screen.Subscription.route) {
+            if (currentRoute != Screen.Subscription.route &&
+            currentRoute != Screen.Developer.route &&
+            currentRoute != Screen.Inspector.route) {
                 NavigationBar {
                     bottomNavItems.forEach { screen ->
                         NavigationBarItem(
@@ -85,10 +91,22 @@ fun AppNavGraph() {
             composable(Screen.History.route) { HistoryScreen() }
             composable(Screen.Rules.route) { RulesScreen() }
             composable(Screen.Settings.route) {
-                SettingsScreen(onNavigateSubscription = { navController.navigate(Screen.Subscription.route) })
+                SettingsScreen(
+                    onNavigateSubscription = { navController.navigate(Screen.Subscription.route) },
+                    onNavigateDeveloper    = { navController.navigate(Screen.Developer.route) }
+                )
             }
             composable(Screen.Subscription.route) {
                 SubscriptionScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(Screen.Developer.route) {
+                DeveloperSettingsScreen(
+                    onBack              = { navController.popBackStack() },
+                    onNavigateInspector = { navController.navigate(Screen.Inspector.route) }
+                )
+            }
+            composable(Screen.Inspector.route) {
+                InspectorScreen(onBack = { navController.popBackStack() })
             }
         }
     }

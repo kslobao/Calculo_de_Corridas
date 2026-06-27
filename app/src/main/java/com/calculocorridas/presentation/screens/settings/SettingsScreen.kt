@@ -1,5 +1,6 @@
 package com.calculocorridas.presentation.screens.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,9 +11,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -29,12 +34,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.calculocorridas.BuildConfig
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
-    onNavigateSubscription: () -> Unit
+    onNavigateSubscription: () -> Unit,
+    onNavigateDeveloper: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -77,6 +84,33 @@ fun SettingsScreen(
                 SwitchRow("99 Motorista",   state.monitor99,      viewModel::setMonitor99)
                 SwitchRow("inDrive",        state.monitorInDrive, viewModel::setMonitorInDrive)
                 SwitchRow("iFood Entregador", state.monitorIFood, viewModel::setMonitorIFood)
+            }
+
+            // Entrada para Desenvolvedor — sempre visível em DEBUG, oculta em release
+            if (BuildConfig.DEBUG) {
+                SectionCard("AVANÇADO") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNavigateDeveloper() }
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.BugReport, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary)
+                            Column {
+                                Text("Desenvolvedor", style = MaterialTheme.typography.bodyMedium)
+                                Text("Accessibility Inspector, diagnóstico",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                            }
+                        }
+                        Icon(Icons.Default.ChevronRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                    }
+                }
             }
         }
     }
