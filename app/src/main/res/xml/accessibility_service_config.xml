@@ -8,6 +8,6 @@
     android:canTakeScreenshot="true"
     android:description="@string/accessibility_service_description"
     android:notificationTimeout="100"
-    android:packageNames="com.ubercab.driver,com.taxis99.driver,sinet.startup.inDriver,br.com.ifood.driver"
+    android:packageNames="com.ubercab.driver,com.app99.driver,sinet.startup.inDriver,br.com.ifood.driver"
     android:settingsActivity=".presentation.MainActivity"
     android:summary="@string/accessibility_service_summary" />

@@ -76,43 +76,48 @@ class RideAccessibilityService : AccessibilityService() {
 
         val appSource = AppSource.fromPackage(packageName) ?: return
 
-        // Nova janela: invalida hash para garantir OCR fresco no novo card
-        if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            ocrManager.invalidateHash()
+        when (eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                // Nova janela/card: cancela qualquer OCR pendente e inicia novo imediatamente
+                ocrManager.invalidateHash()
+                ocrJob?.cancel()
+                ocrJob = scope.launch {
+                    delay(200L) // aguarda renderização
+                    triggerOcr(appSource, packageName)
+                }
+                Log.d(TAG, "[$appSource] STATE_CHANGED → ocrJob iniciado (200ms)")
+            }
+            AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                // Conteúdo atualizado: só inicia OCR se não há job ativo (evita cancelar STATE job)
+                if (ocrJob?.isActive != true) {
+                    ocrJob = scope.launch {
+                        delay(400L) // maior delay para amortecer rajadas de CONTENT_CHANGED
+                        triggerOcr(appSource, packageName)
+                    }
+                    Log.d(TAG, "[$appSource] CONTENT_CHANGED → ocrJob fallback (400ms)")
+                }
+            }
+        }
+    }
+
+    private suspend fun triggerOcr(appSource: AppSource, packageName: String) {
+        val enabled = when (appSource) {
+            AppSource.UBER        -> userPreferences.monitorUber.first()
+            AppSource.NINETY_NINE -> userPreferences.monitor99.first()
+            AppSource.INDRIVE     -> userPreferences.monitorInDrive.first()
+            AppSource.IFOOD       -> userPreferences.monitorIFood.first()
+        }
+        if (!enabled) { Log.d(TAG, "[$appSource] monitoramento desativado"); return }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            Log.w(TAG, "[$appSource] OCR requer Android 11+"); return
+        }
+        if (!ocrManager.shouldAttemptOcr()) {
+            Log.d(TAG, "[$appSource] OCR bloqueado por modo econômico"); return
         }
 
-        // STATE_CHANGED: card aparecendo → 200ms para renderizar
-        // CONTENT_CHANGED: conteúdo atualizando → 400ms para amortecer eventos seguidos
-        val delayMs = if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) 200L else 400L
-
-        ocrJob?.cancel()
-        ocrJob = scope.launch {
-            delay(delayMs)
-
-            val enabled = when (appSource) {
-                AppSource.UBER        -> userPreferences.monitorUber.first()
-                AppSource.NINETY_NINE -> userPreferences.monitor99.first()
-                AppSource.INDRIVE     -> userPreferences.monitorInDrive.first()
-                AppSource.IFOOD       -> userPreferences.monitorIFood.first()
-            }
-            if (!enabled) {
-                Log.d(TAG, "[$appSource] monitoramento desativado")
-                return@launch
-            }
-
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-                Log.w(TAG, "[$appSource] OCR requer Android 11+")
-                return@launch
-            }
-
-            if (!ocrManager.shouldAttemptOcr()) {
-                Log.d(TAG, "[$appSource] OCR bloqueado por modo econômico")
-                return@launch
-            }
-
-            Log.d(TAG, "[$appSource] Iniciando OCR...")
-            runOcrCapture(appSource, packageName)
-        }
+        Log.d(TAG, "[$appSource] Iniciando OCR...")
+        runOcrCapture(appSource, packageName)
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
