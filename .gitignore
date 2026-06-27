@@ -19,3 +19,9 @@ app/google-services.json
 # Sensitive
 *.env
 keystore.properties
+
+# Dumps e análises locais (gerados em tempo de execução)
+dumps_analise/
+
+# JVM heap dumps
+*.hprof
