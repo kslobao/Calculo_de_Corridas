@@ -25,7 +25,7 @@ import kotlin.math.min
 private const val TAG           = "OcrManager"
 private const val MAX_WIDTH_PX  = 720
 private const val MAX_PIXELS    = 1_000_000          // 1 MP
-private const val ECONOMIC_MS   = 3_000L             // modo econômico: mín 3s entre OCR
+private const val ECONOMIC_MS   = 1_500L             // modo econômico: mín 1.5s entre OCR
 private const val HASH_SAMPLE   = 20                 // grade NxN para hash rápido
 
 @Singleton
@@ -137,27 +137,33 @@ class OcrManager @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.R)
     fun detectCardBounds(
         windows: List<AccessibilityWindowInfo>,
+        packageName: String,
         screenW: Int,
         screenH: Int
     ): Rect {
-        val uberWindows = windows.filter { w ->
-            runCatching { w.root?.packageName?.toString()?.contains("ubercab") == true }.getOrDefault(false)
+        val appWindows = windows.filter { w ->
+            runCatching { w.root?.packageName?.toString() == packageName }.getOrDefault(false)
         }
 
-        // Janela Uber cujo topo começa na metade inferior → provável bottom sheet do card
-        for (w in uberWindows) {
+        // Janela do app cujo topo começa abaixo de 30% da tela → provável card/bottom sheet
+        for (w in appWindows) {
             val b = Rect()
             w.getBoundsInScreen(b)
             if (b.top > screenH * 0.30 && b.height() > 100) {
-                Log.d(TAG, "Card detectado via janela: $b (window id=${w.id})")
+                Log.d(TAG, "[$packageName] Card detectado via janela: $b")
                 return b
             }
         }
 
-        // Fallback: capturar toda a metade inferior
+        // Fallback: capturar parte inferior da tela (onde cards aparecem)
         val fallback = Rect(0, (screenH * 0.42).toInt(), screenW, (screenH * 0.97).toInt())
-        Log.d(TAG, "Card: fallback bottom half $fallback")
+        Log.d(TAG, "[$packageName] Card: fallback $fallback")
         return fallback
+    }
+
+    fun invalidateHash() {
+        lastHash = 0
+        Log.d(TAG, "Hash invalidado — próximo OCR forçará nova captura")
     }
 
     fun destroy() {

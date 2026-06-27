@@ -45,38 +45,46 @@ object OcrResultParser {
 
         Log.d(TAG, "Linhas para parse (${lines.size}): $lines")
 
-        var value: Double?   = null
-        var distKm: Double?  = null
-        var durMin: Double?  = null
+        var value: Double? = null
+        var totalDist = 0.0
+        var distCount = 0
+        var totalDur  = 0.0
+        var durCount  = 0
         var destination: String? = null
 
         for (raw in lines) {
             val line = raw.trim()
             if (line.isBlank()) continue
 
+            // Preço: apenas primeira ocorrência
             if (value == null) {
-                PRICE_RE.find(line)?.let { value = parseDecimal(it.groupValues[1]) }
+                PRICE_RE.find(line)?.let { value = parseDecimal(it.groupValues[1], isPrice = true) }
             }
-            if (distKm == null) {
-                DISTANCE_RE.find(line)?.let { distKm = parseDecimal(it.groupValues[1]) }
+            // Distância: SOMA todas (pickup + destino)
+            DISTANCE_RE.findAll(line).forEach { m ->
+                parseDecimal(m.groupValues[1])?.let { totalDist += it; distCount++ }
             }
-            if (durMin == null) {
-                TIME_RE.find(line)?.let { durMin = it.groupValues[1].toDoubleOrNull() }
+            // Tempo: SOMA todos (pickup + destino)
+            TIME_RE.findAll(line).forEach { m ->
+                m.groupValues[1].toDoubleOrNull()?.let { totalDur += it; durCount++ }
             }
         }
 
+        val distKm = if (distCount > 0) totalDist else null
+        val durMin = if (durCount  > 0) totalDur  else null
+
         if (value == null || value!! <= 0.0)   { Log.d(TAG, "Valor ausente"); return null }
-        if (distKm == null || distKm!! <= 0.0) { Log.d(TAG, "Distância ausente"); return null }
-        if (durMin == null || durMin!! <= 0.0) { Log.d(TAG, "Tempo ausente"); return null }
+        if (distKm == null || distKm <= 0.0)   { Log.d(TAG, "Distância ausente"); return null }
+        if (durMin == null || durMin <= 0.0)   { Log.d(TAG, "Tempo ausente"); return null }
 
-        destination = findDestination(lines, value!!, distKm!!, durMin!!)
+        destination = findDestination(lines, value!!, distKm, durMin)
 
-        Log.i(TAG, "OCR parse OK → R\$$value · ${distKm}km · ${durMin}min · dest=$destination")
+        Log.i(TAG, "OCR parse OK → R\$$value · ${distKm}km ($distCount segmentos) · ${durMin}min ($durCount segmentos) · dest=$destination")
 
         return ParsedRide(
             value       = value!!,
-            distanceKm  = distKm!!,
-            durationMin = durMin!!,
+            distanceKm  = distKm,
+            durationMin = durMin,
             origin      = null,
             destination = destination,
             category    = null
@@ -85,10 +93,10 @@ object OcrResultParser {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private fun parseDecimal(s: String): Double? {
+    private fun parseDecimal(s: String, isPrice: Boolean = false): Double? {
         val clean = s.trim()
         // "18,50" → "18.50"  |  "1.234,56" → "1234.56"
-        return when {
+        val value = when {
             clean.contains(',') && clean.contains('.') -> {
                 // Ponto é separador de milhar, vírgula é decimal
                 clean.replace(".", "").replace(",", ".").toDoubleOrNull()
@@ -96,6 +104,14 @@ object OcrResultParser {
             clean.contains(',') -> clean.replace(",", ".").toDoubleOrNull()
             else -> clean.toDoubleOrNull()
         }
+        // Para preços: inteiro ≥ 1000 sem separador decimal = OCR perdeu a vírgula
+        // Ex: "17,10" lido como "1710" → 1710 ÷ 100 = 17.10
+        if (isPrice && value != null && value >= 1000.0 &&
+            !clean.contains(',') && !clean.contains('.')) {
+            Log.d(TAG, "Preço ajustado (vírgula perdida pelo OCR): $clean → ${value / 100.0}")
+            return value / 100.0
+        }
+        return value
     }
 
     private fun findDestination(
